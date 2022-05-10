@@ -1,0 +1,25 @@
+# 1) Specify the main command (either 'predict' or 'evaluate')
+command : 'evaluate'
+
+# 2) Specify the command-related parameters
+# 2)a FOR PREDICTION ONLY
+
+model_path : '/home/user/asm-map/data/models/Unet_2021-05-16/data/model.h5'
+tifs_folder_path : '/home/user/asm-map/data/test-images/Sub-Tropical_West_Africa/images'
+output_folder_path : '/home/user/asm-map/data/test-images/Sub-Tropical_West_Africa'
+binary_threshold : 0.5
+
+# 2)b FOR EVALUATION ONLY
+
+# NB: subcommand in ['all', 'threshold', 'size', 'biomes', 'roc', 'matrix']
+subcommand : 'all'
+gt_folder_path : '/home/user/asm-map/data/test-images/Sub-Tropical_West_Africa/ground_truth'
+pred_folder_path : '/home/user/asm-map/data/test-images/Sub-Tropical_West_Africa/prediction/probability'
+eval_folder_path : '/home/user/asm-map/data/test-images/Sub-Tropical_West_Africa/evaluation'
+gt_asm_shapefile : '/home/user/asm-map/data/test-images/Sub-Tropical_West_Africa/gt_shapes.shp'
+aoi_shapefile_path : '/home/user/asm-map/data/shapefiles/subtropical_west_africa_region.shp'
+
+# Additional parameters for threshold metric only
+no_mcc : True
+no_fscore : False
+output_filename : '1_performances_vs_thresholds_without_mcc.png'
