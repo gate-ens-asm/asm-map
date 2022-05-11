@@ -10,7 +10,7 @@ import re
 import sys
 
 # Local imports
-sys.path.append('..')
+sys.path.append('.')
 import src.utils.evaluate_utils as eu
 import src.utils.log_management as log
 
