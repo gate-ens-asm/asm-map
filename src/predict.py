@@ -5,6 +5,7 @@ Script handling the prediction computation (predict ASM locations on images usin
 # Standard imports
 import os
 import sys
+import logging
 
 # Local imports
 sys.path.append('.')
@@ -25,11 +26,11 @@ def predict_dataset(model_path: str, imgs_folder_path: str, output_folder_path: 
     """
     try:
         assert os.path.isfile(model_path) and os.path.isdir(imgs_folder_path)  # Obviously
-        assert len(os.path.listdir(imgs_folder_path)) > 0  # At least one image to process
+        assert len(os.listdir(imgs_folder_path)) > 0  # At least one image to process
         assert 0 <= binary_threshold <= 1.0  # Threshold value must be in [0:1]
     except AssertionError as ae:
-        logging.error("Wrong input arguments. The model file must exist, images' folder must contain at least 1 tiff, \
-                       and the Threshold value must stand within [0 : 1]:\n", ae)
+        print("ERROR: Wrong input arguments. The model file must exist, images' folder must contain at least 1 tiff, \
+               and the Threshold value must stand within [0 : 1]:\n", ae)
         return -1
 
     # Logging setup
@@ -48,7 +49,22 @@ def predict_dataset(model_path: str, imgs_folder_path: str, output_folder_path: 
             logging.info('{} / {} - Box {}'.format(i + 1, len(dataset_imgs_list), str(grid_labeled_region)))
             raster_box_path = os.path.join(imgs_folder_path, '{}.tiff'.format(grid_labeled_region))
             logging.info('Make prediction...')
-            pu.predict_box(model_path, raster_box_path, proba_prediction_folder_path, binary_threshold)
+            out = pu.predict_box(model_path, raster_box_path, proba_prediction_folder_path, binary_threshold)
+            if out is not None:
+                return out
         else:
             logging.info('{} / {} - Box {} was already predicted. Skipping.'.format(i + 1, len(dataset_imgs_list),
                                                                                     grid_labeled_region))
+
+
+if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Test prediction function')
+    parser.add_argument('-model', help='Path to model file')
+    parser.add_argument('-images', help='Path to folder that contains all tiff images')
+    parser.add_argument('-out', help='Path to output folder')
+    parser.add_argument('-t', help='Binary threshold value')
+    args = parser.parse_args()
+
+    predict_dataset(args.model, args.images, args.out, float(args.t))

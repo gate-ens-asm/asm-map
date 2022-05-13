@@ -57,32 +57,35 @@ def predict_box(model_path: str, image_path: str, proba_prediction_folder_path: 
     output_patch_size = 388
     window_size = 1449
 
-    # Second, load keras model
-    model = tf.keras.models.load_model(model_path, custom_objects={'f05_m': f05_m, 'fl': focal_loss(),
-                                                                   'recall_m': recall_m, 'precision_m': precision_m})
+    try:
+        # Second, load keras model
+        model = tf.keras.models.load_model(model_path, custom_objects={'f05_metric': f05_m, 'fl': focal_loss(),
+                                                                       'recall_m': recall_m, 'precision_m': precision_m})
 
-    # Third, define output useful paths
-    image_id = int(os.path.splitext(os.path.basename(image_path))[0])
-    bin_prediction_folder_path = os.path.join(os.path.dirname(proba_prediction_folder_path), 'binary')
-    proba_prediction_tif_path = os.path.join(proba_prediction_folder_path, '{}.tiff'.format(image_id))
-    binary_prediction_tif_path = os.path.join(bin_prediction_folder_path, '{}_binary.tiff'.format(image_id))
+        # Third, define output useful paths
+        image_id = int(os.path.splitext(os.path.basename(image_path))[0])
+        bin_prediction_folder_path = os.path.join(os.path.dirname(proba_prediction_folder_path), 'binary')
+        proba_prediction_tif_path = os.path.join(proba_prediction_folder_path, '{}.tiff'.format(image_id))
+        binary_prediction_tif_path = os.path.join(bin_prediction_folder_path, '{}_binary.tiff'.format(image_id))
 
-    # Fourth, compute the input/output patches sizes
-    wins = (window_size - (input_patch_size - output_patch_size)) // output_patch_size
-    read_window_shape_w = wins * output_patch_size + (input_patch_size - output_patch_size)
-    read_window_shape_h = input_patch_size
-    write_window_shape_w = wins * output_patch_size
-    write_window_shape_h = output_patch_size
+        # Fourth, compute the input/output patches sizes
+        wins = (window_size - (input_patch_size - output_patch_size)) // output_patch_size
+        read_window_shape_w = wins * output_patch_size + (input_patch_size - output_patch_size)
+        read_window_shape_h = input_patch_size
+        write_window_shape_w = wins * output_patch_size
+        write_window_shape_h = output_patch_size
 
-    # Fifth, create probability prediction
-    data_processor = tp.OverlapPredictionDataProcessor(model, input_patch_shape='auto', output_patch_shape='auto')
-    processor = tp.OverlapWindowTifProcessor(image_path, proba_prediction_tif_path, data_processor,
-                                             read_window_shape=(read_window_shape_h, read_window_shape_w),
-                                             write_window_shape=(write_window_shape_h, write_window_shape_w))
-    processor.set_bands_to_use([i for i in range(1, 14)])
-    processor.process()
+        # Fifth, create probability prediction
+        data_processor = tp.OverlapPredictionDataProcessor(model, input_patch_shape='auto', output_patch_shape='auto')
+        processor = tp.OverlapWindowTifProcessor(image_path, proba_prediction_tif_path, data_processor,
+                                                 read_window_shape=(read_window_shape_h, read_window_shape_w),
+                                                 write_window_shape=(write_window_shape_h, write_window_shape_w))
+        processor.process()
 
-    # Sixth, create binary prediction
-    data_processor = tp.ToBinaryPixelBasedDataProcessor(cutoff_value=binary_threshold)
-    processor = tp.PixelBasedTifProcessor(proba_prediction_tif_path, binary_prediction_tif_path, data_processor)
-    processor.process()
+        # Sixth, create binary prediction
+        data_processor = tp.ToBinaryPixelBasedDataProcessor(cutoff_value=binary_threshold)
+        processor = tp.PixelBasedTifProcessor(proba_prediction_tif_path, binary_prediction_tif_path, data_processor)
+        processor.process()
+    except Exception as e:
+        logging.error('A problem occurred during the current prediction: ', e)
+        return -1
