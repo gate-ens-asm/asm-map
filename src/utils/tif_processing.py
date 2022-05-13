@@ -71,7 +71,6 @@ def transform_to_categorial_encoding_band(data):
     :param data: Input data array, data.shape is (number_of_bands, height, width).
     :return: updated data array (number_of_bands + 12, height, width).
     """
-    assert(data.shape[0] == 13)  # This function is not flexible and requires 13 bands in the input normalized tiff
     classification_classes = 12
     data_new = np.zeros((data.shape[0] + classification_classes, data.shape[1], data.shape[2]))
     data_new[:data.shape[0]] = data[:data.shape[0]]
@@ -97,6 +96,10 @@ class TifProcessor(ABC):
         self.meta_output = dict(self.rio_input.meta)
         self.meta_output.update(tif_data_processor.get_meta_changes())
         self.rio_output = rasterio.open(self.output_tif, 'w+', **self.meta_output)
+        self.rio_output.write(np.zeros((self.meta_output['count'], *self.rio_output.shape),
+                                       dtype=self.meta_output['dtype']) + np.array(output_init_value,
+                                                                                   dtype=self.meta_output[
+                                                                                       'dtype']))  # Initialize output
 
     @abstractmethod
     def process(self):
