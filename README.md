@@ -38,7 +38,7 @@ One can access it through this link : [DATA](https://www.dropbox.com/sh/qdyw5gk3
 
 **In order to run the prediction / evaluation scripts properly, one must download and copy from this link:**
 - the **images** folder (with its content) should be copied into the *'asm-map/data/test-images/Sub-Tropical_West_Africa'* folder;
-- the **ground-truth** folder (with its content) should also be copied into the *'asm-map/data/test-images/'* folder;
+- the **ground-truth** folder (with its content) should also be copied into the *'asm-map/data/test-images/Sub-Tropical_West_Africa'* folder;
 - the **africa_biomes_wwf.xxx** 4 files should be copied together into the *'asm-map/data/shapefiles'* folder;
 - the **model.h5** file should be copied into the *'asm-map/data/models/Unet_2021-05-16/data'* folder.
 
