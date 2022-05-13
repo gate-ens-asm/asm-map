@@ -11,13 +11,13 @@ import re
 import sys
 
 # Third party imports
-import geoalchemy2.shape
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pyproj
 import rasterio.mask
+from rasterio.features import shapes
 import seaborn as sn
 import shapely.geometry
 from matplotlib.transforms import Bbox
@@ -108,12 +108,12 @@ def compute_recall_per_size_vs_thresholds(pred_folder_path: str, gt_asm_shapefil
     asm_recalls_dict = dict()
     logging.info(f"Nb of thresholds values considered : {len(thresholds_m2)}")
 
-    # Get GT shapes list from shapefile
-    ground_truth_shapes = get_asm_shapes_from_gt_shapefile(gt_asm_shapefile)  # TODO
+    # Read GT shapes from shapefile
+    gt_shapes_gpd = gpd.read_file(gt_asm_shapefile)
 
     # Compute projected area and retrieve predictions values for each GT mine shapes
-    asm_dicts_list = create_dict_with_areas_and_preds_for_gt_shapes(ground_truth_shapes, pred_folder_path, 0)
-    indus_dicts_list = create_dict_with_areas_and_preds_for_gt_shapes(ground_truth_shapes, pred_folder_path, 1)
+    asm_dicts_list = create_dict_with_areas_and_preds_for_gt_shapes(gt_shapes_gpd, pred_folder_path, 0)
+    indus_dicts_list = create_dict_with_areas_and_preds_for_gt_shapes(gt_shapes_gpd, pred_folder_path, 1)
     logging.info(f"Nb of ASM mines in studied dataset : {len(asm_dicts_list)}")
     logging.info(f"Nb of industrial mines in studied dataset : {len(indus_dicts_list)}")
 
@@ -159,8 +159,8 @@ def compute_metrics_per_biomes(pred_folder_path: str, gt_folder_path: str, outpu
                                    Ex: `asm-map/data/shapefiles/subtropical_west_africa_region.shp`
     """
     # Manage shapefiles and dataframes, query boxes and init useful variables
-    am_map_folder = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))  # TODO
-    biomes_shp = os.path.join(am_map_folder, "data/shapefiles/africa_biomes_wwf_final.shp")  # TODO
+    asm_map_folder = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    biomes_shp = os.path.join(asm_map_folder, "data/shapefiles/africa_biomes_wwf.shp")
     biomes_df = gpd.read_file(biomes_shp)
     # aoi_region_shp = os.path.join(am_map_folder, "data/region/real_west_africa_tropical_rainforest_region.shp")
     if aoi_shapefile_path != '' and os.path.exists(aoi_shapefile_path):  # Intersect df to keep only biomes in the aoi
@@ -172,7 +172,7 @@ def compute_metrics_per_biomes(pred_folder_path: str, gt_folder_path: str, outpu
         aoi_biomes_df = biomes_df
 
     # Retrieve dataset's boxes' information
-    all_boxes_dataset = create_dict_with_boxes_infos(pred_folder_path)  # TODO
+    dataset_images_infos = create_dict_list_with_boxes_infos(gt_folder_path)
 
     metrics_all_biomes = []  # Initiate output metrics list
     areas_biomes, areas_biomes_percentage = compute_areas_biomes(aoi_biomes_df)  # Get biomes areas
@@ -185,15 +185,15 @@ def compute_metrics_per_biomes(pred_folder_path: str, gt_folder_path: str, outpu
         biome_pred = []
         logging.info(f"\nBIOME : {aoi_biomes_df.BIOME_NUM[biome_index]} - {aoi_biomes_df.BIOME_NAME[biome_index]}")
 
-        for dataset_box in all_boxes_dataset:  # Loop on boxes and retrieve paths
-            gt_path = os.path.join(gt_folder_path, str(dataset_box.grid_labeled_regions_id) + '.tiff')  # TODO
-            pred_path = os.path.join(pred_folder_path, str(dataset_box.grid_labeled_regions_id) + '.tiff')  # TODO
-            center_of_box = geoalchemy2.shape.to_shape(dataset_box.geom).centroid  # TODO
+        for dataset_box in dataset_images_infos:  # Loop on boxes and retrieve paths
+            gt_path = os.path.join(gt_folder_path, str(dataset_box['glr_id']) + '.tiff')
+            pred_path = os.path.join(pred_folder_path, str(dataset_box['glr_id']) + '.tiff')
+            center_of_box = dataset_box['geometry'].centroid
 
             # Add to biome's array if the box center is into the biome
             if center_of_box.within(aoi_biomes_df.geometry[biome_index]):
                 nb_boxes += 1
-                np_gt, np_pred_proba = get_np_arrays(gt_path, pred_path)  # TODO
+                np_gt, np_pred_proba = get_np_arrays(gt_path, pred_path)
                 biome_gt.extend(np_gt), biome_pred.extend(np_pred_proba)
 
         # Compute metrics upon this biome, then append results to output global list with all the biomes
@@ -547,6 +547,28 @@ def create_global_dataset_np_arrays(pred_folder_path: str, gt_folder_path: str):
     return gt_array, proba_pred_array
 
 
+def create_dict_list_with_boxes_infos(gt_folder_path: str):
+    """
+    Read from the ground truth folder the dataset's content (images' id and location) and store this into a dictionary.
+
+    :param str gt_folder_path: Path to the folder that contains the GT boxes, whose filenames are their ID.
+    :return: List of images' dictionaries, each dictionary's keys being 'glr_id' and 'geometry'.
+    """
+    out_dicts_list = []
+    images_paths_list = [os.path.join(gt_folder_path, filename) for filename in os.listdir(gt_folder_path)]
+
+    for image_path in images_paths_list:  # Loop on the dataset's tifs files to get their ID and their geometry
+        image_id = int(os.path.splitext(os.path.basename(image_path))[0])
+        with rasterio.open(image_path, 'r') as src:
+            image = src.read(1)  # Read first band
+            img_dict = ({'glr_id': image_id, 'geometry': s} for (s, v) in shapes(image, transform=src.transform))
+            img_out = list(img_dict)[0]  # Convert generator to dict object
+            img_out['geometry'] = shapely.geometry.shape(img_out['geometry'])  # Convert image's bounds to shapely geom
+        out_dicts_list.append(img_out)
+
+    return out_dicts_list
+
+
 def apply_binary_threshold_to_prediction(np_pred_proba, threshold: float = 0.5):
     """
     Copy array, then apply probability threshold in [0:1] to given prediction array to obtain output binary array.
@@ -636,12 +658,12 @@ def get_projected_area_for_shape(shape):
     """
     Computes projected area of given shape, by transposing to EPSG 3857 - Web Mercator.
 
-    :param shape: Instance of class GridShapes defined in src/utils/database.py (mine shape from DB).
+    :param shape: Instance of ASM shape from Ground Truth GeoDataFrame (has a 'geometry' attribute)
     :return: Area of input mine shape in m² (float)
     """
     source_crs, target_crs = pyproj.CRS('epsg:4326'), pyproj.CRS('epsg:3857')
     proj = pyproj.Transformer.from_proj(source_crs, target_crs, always_xy=True).transform
-    shapely_shape = geoalchemy2.shape.to_shape(shape.geom)  # Convert to shapely geometry
+    shapely_shape = shape.geometry
     return transform(proj, shapely_shape).area
 
 
@@ -674,12 +696,12 @@ def extract_mask_v2(wsg84_shapes, tif_file_path: str):
     return out_image
 
 
-def create_dict_with_areas_and_preds_for_gt_shapes(ground_truth_shapes, pred_folder_path: str, label: int):
+def create_dict_with_areas_and_preds_for_gt_shapes(gt_asm_shapes_gpd, pred_folder_path: str, label: int):
     """
     Creates output array of dictionaries (one dict for each Ground Truth mine with desired label), with projected
     area (in m²) and corresponding prediction probability values.
 
-    :param ground_truth_shapes: List of GridShapes objects (class defined in src/utils/database.py)
+    :param gt_asm_shapes_gpd: GeoDataFrame of ASM shapes objects (with 'label', 'geometry' and 'glr_id' columns)
     :param pred_folder_path: Path to a folder that contains the prediction boxes for one or more grid_label_ids. The
                              files within the folder are expected to have the grid_label_id as name and tiff extension.
                              Ex: `/media/WD1/grid_prediction/test_set/7/model_ref_path/prediction/probability`
@@ -688,12 +710,12 @@ def create_dict_with_areas_and_preds_for_gt_shapes(ground_truth_shapes, pred_fol
              NB: In each dictionary, keys are 'np_masked_pred_array' and 'gt_shape_area'
     """
     mines_dicts_array = []
-    for gt_shape in ground_truth_shapes:  # Loop on GT mines
+    for idx, gt_shape in gt_asm_shapes_gpd.iterrows():  # Loop on GT mines
         if gt_shape.label == label:
             gt_shape_area = get_projected_area_for_shape(gt_shape)  # in m²
-            tif_file = os.path.join(pred_folder_path, str(gt_shape.labeled_regions_grid_id) + '.tiff')
+            tif_file = os.path.join(pred_folder_path, str(gt_shape.glr_id) + '.tiff')
             # Keep only the predictions values within the GT shapes from the input prediction tif file
-            np_masked_pred_array = extract_mask_v2([geoalchemy2.shape.to_shape(gt_shape.geom)], tif_file)
+            np_masked_pred_array = extract_mask_v2([gt_shape.geometry], tif_file)
             mines_dicts_array.append({'np_masked_pred_array': np_masked_pred_array, 'gt_shape_area': gt_shape_area})
     return mines_dicts_array
 

@@ -20,8 +20,8 @@ import src.utils.log_management as log
 thresholds_array = [0.2, 0.4, 0.6]
 
 
-def evaluate_all_metrics(pred_folder_path: str, gt_folder_path: str, eval_folder_path: str, gt_asm_shapefile: str,
-                         aoi_shapefile_path: str = ''):
+def evaluate_all_metric(pred_folder_path: str, gt_folder_path: str, eval_folder_path: str, gt_asm_shapefile: str,
+                        aoi_shapefile_path: str = ''):
     """
     Computes performance metrics for given predictions and corresponding ground truth. Metrics computed are :
 
@@ -45,12 +45,11 @@ def evaluate_all_metrics(pred_folder_path: str, gt_folder_path: str, eval_folder
     """
     try:
         assert os.path.isdir(pred_folder_path) and os.path.isdir(gt_folder_path) and os.path.isfile(gt_asm_shapefile)
-        assert os.path.listdir(pred_folder_path) == os.path.listdir(gt_folder_path)  # Same images contained in both
+        assert os.listdir(pred_folder_path) == os.listdir(gt_folder_path)  # Same images contained in both
         assert not os.path.samefile(pred_folder_path, gt_folder_path)  # Otherwise, they will be overwritten
         assert len(thresholds_array) == 3  # Otherwise, the script will not work properly
     except AssertionError as ae:
-        logging.error('Wrong input arguments. The paths must exist and contain tifs, and there must be 3 T values:')
-        logging.error(ae)
+        print('ERROR: Wrong input arguments. Paths must exist and contain tifs, and there must be 3 T values:\n', ae)
         return -1
 
     # Paths management
@@ -62,45 +61,49 @@ def evaluate_all_metrics(pred_folder_path: str, gt_folder_path: str, eval_folder
     log.setup_logging_for_evaluation(eval_folder_path, 'all-metrics')
 
     # Compute metrics
-    logging.info("FIRST METRIC : PERFORMANCES ALONG THRESHOLDS\n")
-    output_fig_path_m1 = os.path.join(eval_folder_path, "1_performances_vs_thresholds.png")
-    if not os.path.exists(output_fig_path_m1):  # Check if already exists
-        eu.compute_metrics_vs_thresholds(pred_folder_path, gt_folder_path, output_fig_path_m1, False, False,
-                                         metrics_csv_path)
-    else:
-        logging.info(f'Performances VS thresholds metric already computed and available at {output_fig_path_m1}\n')
+    try:
+        logging.info("FIRST METRIC : PERFORMANCES ALONG THRESHOLDS\n")
+        output_fig_path_m1 = os.path.join(eval_folder_path, "1_performances_vs_thresholds.png")
+        if not os.path.exists(output_fig_path_m1):  # Check if already exists
+            eu.compute_metrics_vs_thresholds(pred_folder_path, gt_folder_path, output_fig_path_m1, False, False,
+                                             metrics_csv_path)
+        else:
+            logging.info(f'Performances VS thresholds metric already computed and available at {output_fig_path_m1}\n')
 
-    logging.info("SECOND METRIC : RECALLS ALONG MINE SIZE CLASSIFICATION\n")
-    output_fig_path_m2 = os.path.join(eval_folder_path, "2_recalls_vs_thresholds_per_size_classification.png")
-    if not os.path.exists(output_fig_path_m2):  # Check if already exists
-        eu.compute_recall_per_size_vs_thresholds(pred_folder_path, gt_asm_shapefile, output_fig_path_m2)
-    else:
-        logging.info(f'Recalls along mine-size metric already computed and available at {output_fig_path_m2}\n')
+        logging.info("SECOND METRIC : RECALLS ALONG MINE SIZE CLASSIFICATION\n")
+        output_fig_path_m2 = os.path.join(eval_folder_path, "2_recalls_vs_thresholds_per_size_classification.png")
+        if not os.path.exists(output_fig_path_m2):  # Check if already exists
+            eu.compute_recall_per_size_vs_thresholds(pred_folder_path, gt_asm_shapefile, output_fig_path_m2)
+        else:
+            logging.info(f'Recalls along mine-size metric already computed and available at {output_fig_path_m2}\n')
 
-    logging.info("THIRD METRIC : PERFORMANCES PER BIOMES\n")
-    output_csv_path_m3 = os.path.join(eval_folder_path, "3_performances_per_biomes.csv")
-    if not os.path.exists(output_csv_path_m3):  # Check if already exists
-        eu.compute_metrics_per_biomes(pred_folder_path, gt_folder_path, output_csv_path_m3, thresholds_array,
-                                      aoi_shapefile_path)
-    else:
-        logging.info(f'Performances per biomes already computed and available at {output_csv_path_m3}\n')
+        logging.info("THIRD METRIC : PERFORMANCES PER BIOMES\n")
+        output_csv_path_m3 = os.path.join(eval_folder_path, "3_performances_per_biomes.csv")
+        if not os.path.exists(output_csv_path_m3):  # Check if already exists
+            eu.compute_metrics_per_biomes(pred_folder_path, gt_folder_path, output_csv_path_m3, thresholds_array,
+                                          aoi_shapefile_path)
+        else:
+            logging.info(f'Performances per biomes already computed and available at {output_csv_path_m3}\n')
 
-    logging.info("FOURTH METRIC : ROC CURVE + AUC\n")
-    output_fig_path_m4 = os.path.join(eval_folder_path, "4_roc_auc_curve.png")
-    if not os.path.exists(output_fig_path_m4):  # Check if already exists
-        eu.compute_roc_auc_curve(pred_folder_path, gt_folder_path, output_fig_path_m4, metrics_csv_path)
-    else:
-        logging.info(f'ROC metric already computed and available at {output_fig_path_m4}\n')
+        logging.info("FOURTH METRIC : ROC CURVE + AUC\n")
+        output_fig_path_m4 = os.path.join(eval_folder_path, "4_roc_auc_curve.png")
+        if not os.path.exists(output_fig_path_m4):  # Check if already exists
+            eu.compute_roc_auc_curve(pred_folder_path, gt_folder_path, output_fig_path_m4, metrics_csv_path)
+        else:
+            logging.info(f'ROC metric already computed and available at {output_fig_path_m4}\n')
 
-    logging.info("FIFTH METRIC : CONFUSION MATRICES\n")
-    output_fig_path_m5_1 = os.path.join(eval_folder_path, f"5_confusion_matrix_T{thresholds_array[0]}.png")
-    output_fig_path_m5_2 = os.path.join(eval_folder_path, f"5_confusion_matrix_T{thresholds_array[1]}.png")
-    output_fig_path_m5_3 = os.path.join(eval_folder_path, f"5_confusion_matrix_T{thresholds_array[2]}.png")
-    if (not os.path.exists(output_fig_path_m5_1) or (not os.path.exists(output_fig_path_m5_2))
-            or (not os.path.exists(output_fig_path_m5_3))):  # If all already exist, do not compute it again
-        eu.compute_confusion_matrices(pred_folder_path, gt_folder_path, eval_folder_path, thresholds_array)
-    else:
-        logging.info(f'Confusion Matrices already computed and available at {output_fig_path_m5_1[:-7]}X.png\n')
+        logging.info("FIFTH METRIC : CONFUSION MATRICES\n")
+        output_fig_path_m5_1 = os.path.join(eval_folder_path, f"5_confusion_matrix_T{thresholds_array[0]}.png")
+        output_fig_path_m5_2 = os.path.join(eval_folder_path, f"5_confusion_matrix_T{thresholds_array[1]}.png")
+        output_fig_path_m5_3 = os.path.join(eval_folder_path, f"5_confusion_matrix_T{thresholds_array[2]}.png")
+        if (not os.path.exists(output_fig_path_m5_1) or (not os.path.exists(output_fig_path_m5_2))
+                or (not os.path.exists(output_fig_path_m5_3))):  # If all already exist, do not compute it again
+            eu.compute_confusion_matrices(pred_folder_path, gt_folder_path, eval_folder_path, thresholds_array)
+        else:
+            logging.info(f'Confusion Matrices already computed and available at {output_fig_path_m5_1[:-7]}X.png\n')
+    except Exception as e:
+        logging.error('A problem occurred during the current evaluation: ', e)
+        return -1
 
 
 def evaluate_threshold_metric(pred_folder_path: str, gt_folder_path: str, eval_folder_path: str, no_mcc: bool,
@@ -120,11 +123,10 @@ def evaluate_threshold_metric(pred_folder_path: str, gt_folder_path: str, eval_f
     """
     try:
         assert os.path.isdir(pred_folder_path) and os.path.isdir(gt_folder_path)  # Obviously
-        assert os.path.listdir(pred_folder_path) == os.path.listdir(gt_folder_path)  # Same images contained in both
+        assert os.listdir(pred_folder_path) == os.listdir(gt_folder_path)  # Same images contained in both
         assert not os.path.samefile(pred_folder_path, gt_folder_path)  # Otherwise, they will be overwritten
     except AssertionError as ae:
-        logging.error('Wrong input arguments. The paths must exist and contain the same tifs filenames:')
-        logging.error(ae)
+        print('ERROR: Wrong input arguments. Paths must exist and contain the same tifs filenames:\n', ae)
         return -1
 
     # Paths management
@@ -138,8 +140,12 @@ def evaluate_threshold_metric(pred_folder_path: str, gt_folder_path: str, eval_f
     logging.info("FIRST METRIC : PERFORMANCES ALONG THRESHOLDS\n")
     output_fig_path_m1 = os.path.join(eval_folder_path, output_filename)
     if not os.path.exists(output_fig_path_m1):  # Check if already exists
-        eu.compute_metrics_vs_thresholds(pred_folder_path, gt_folder_path, output_fig_path_m1, no_mcc, no_fscore,
-                                         metrics_csv_path)
+        try:
+            eu.compute_metrics_vs_thresholds(pred_folder_path, gt_folder_path, output_fig_path_m1, no_mcc, no_fscore,
+                                             metrics_csv_path)
+        except Exception as e:
+            logging.error('A problem occurred during the main metrics VS thresholds evaluation: ', e)
+            return -1
     else:
         logging.info(f'Performances VS thresholds metric already computed and available at {output_fig_path_m1}\n')
 
@@ -155,10 +161,9 @@ def evaluate_size_metric(pred_folder_path: str, gt_asm_shapefile: str, eval_fold
     """
     try:
         assert os.path.isfile(gt_asm_shapefile)  # Obviously
-        assert os.path.isdir(pred_folder_path) and len(os.path.listdir(pred_folder_path)) > 0  # Existing and not empty
+        assert os.path.isdir(pred_folder_path) and len(os.listdir(pred_folder_path)) > 0  # Existing and not empty
     except AssertionError as ae:
-        logging.error('Wrong input arguments. The paths must exist and contain tifs files:')
-        logging.error(ae)
+        print('ERROR: Wrong input arguments. The paths must exist and contain tifs files:\n', ae)
         return -1
 
     # Paths management and logging setup
@@ -169,7 +174,11 @@ def evaluate_size_metric(pred_folder_path: str, gt_asm_shapefile: str, eval_fold
     logging.info("SECOND METRIC : RECALLS ALONG MINE SIZE CLASSIFICATION\n")
     output_fig_path_m2 = os.path.join(eval_folder_path, "2_recalls_vs_thresholds_per_size_classification.png")
     if not os.path.exists(output_fig_path_m2):  # Check if already exists
-        eu.compute_recall_per_size_vs_thresholds(pred_folder_path, gt_asm_shapefile, output_fig_path_m2)
+        try:
+            eu.compute_recall_per_size_vs_thresholds(pred_folder_path, gt_asm_shapefile, output_fig_path_m2)
+        except Exception as e:
+            logging.error('A problem occurred during the mine-sized classes metric creation: ', e)
+            return -1
     else:
         logging.info(f'Recalls along mine-size metric already computed and available at {output_fig_path_m2}\n')
 
@@ -190,23 +199,26 @@ def evaluate_biomes_metric(pred_folder_path: str, gt_folder_path: str, eval_fold
     """
     try:
         assert os.path.isdir(pred_folder_path) and os.path.isdir(gt_folder_path)  # Obviously
-        assert os.path.listdir(pred_folder_path) == os.path.listdir(gt_folder_path)  # Same images contained in both
+        assert os.listdir(pred_folder_path) == os.listdir(gt_folder_path)  # Same images contained in both
         assert not os.path.samefile(pred_folder_path, gt_folder_path)  # Otherwise, they will be overwritten
     except AssertionError as ae:
-        logging.error('Wrong input arguments. The paths must exist and contain the same tifs filenames:')
-        logging.error(ae)
+        print('ERROR: Wrong input arguments. Paths must exist and contain the same tifs filenames:\n', ae)
         return -1
 
     # Paths management and logging setup
     if not os.path.isdir(eval_folder_path):
         os.makedirs(eval_folder_path)
-    log.setup_logging_for_evaluation(eval_folder_path, 'size-metric')
+    log.setup_logging_for_evaluation(eval_folder_path, 'biomes-metric')
 
     logging.info("THIRD METRIC : PERFORMANCES PER BIOMES\n")
     output_csv_path_m3 = os.path.join(eval_folder_path, "3_performances_per_biomes.csv")
     if not os.path.exists(output_csv_path_m3):  # Check if already exists
-        eu.compute_metrics_per_biomes(pred_folder_path, gt_folder_path, output_csv_path_m3, thresholds_array,
-                                      aoi_shapefile_path)
+        try:
+            eu.compute_metrics_per_biomes(pred_folder_path, gt_folder_path, output_csv_path_m3, thresholds_array,
+                                          aoi_shapefile_path)
+        except Exception as e:
+            logging.error('A problem occurred during the biomes-related metric creation: ', e)
+            return -1
     else:
         logging.info(f'Performances per biomes already computed and available at {output_csv_path_m3}\n')
 
@@ -223,11 +235,10 @@ def evaluate_roc_metric(pred_folder_path: str, gt_folder_path: str, eval_folder_
     """
     try:
         assert os.path.isdir(pred_folder_path) and os.path.isdir(gt_folder_path)  # Obviously
-        assert os.path.listdir(pred_folder_path) == os.path.listdir(gt_folder_path)  # Same images contained in both
+        assert os.listdir(pred_folder_path) == os.listdir(gt_folder_path)  # Same images contained in both
         assert not os.path.samefile(pred_folder_path, gt_folder_path)  # Otherwise, they will be overwritten
     except AssertionError as ae:
-        logging.error('Wrong input arguments. The paths must exist and contain the same tifs filenames:')
-        logging.error(ae)
+        print('ERROR: Wrong input arguments. Paths must exist and contain the same tifs filenames:\n', ae)
         return -1
 
     # Paths management
@@ -241,7 +252,11 @@ def evaluate_roc_metric(pred_folder_path: str, gt_folder_path: str, eval_folder_
     logging.info("FOURTH METRIC : ROC CURVE + AUC\n")
     output_fig_path_m4 = os.path.join(eval_folder_path, "4_roc_auc_curve.png")
     if not os.path.exists(output_fig_path_m4):  # Check if already exists
-        eu.compute_roc_auc_curve(pred_folder_path, gt_folder_path, output_fig_path_m4, metrics_csv_path)
+        try:
+            eu.compute_roc_auc_curve(pred_folder_path, gt_folder_path, output_fig_path_m4, metrics_csv_path)
+        except Exception as e:
+            logging.error('A problem occurred during the ROC metric creation: ', e)
+            return -1
     else:
         logging.info(f'ROC metric already computed and available at {output_fig_path_m4}\n')
 
@@ -258,18 +273,17 @@ def evaluate_matrix_metric(pred_folder_path: str, gt_folder_path: str, eval_fold
     """
     try:
         assert os.path.isdir(pred_folder_path) and os.path.isdir(gt_folder_path)  # Obviously
-        assert os.path.listdir(pred_folder_path) == os.path.listdir(gt_folder_path)  # Same images contained in both
+        assert os.listdir(pred_folder_path) == os.listdir(gt_folder_path)  # Same images contained in both
         assert not os.path.samefile(pred_folder_path, gt_folder_path)  # Otherwise, they will be overwritten
         assert len(thresholds_array) == 3  # Otherwise, the script will not work properly
     except AssertionError as ae:
-        logging.error('Wrong input arguments. The paths must exist and contain tifs, and there must be 3 T values:')
-        logging.error(ae)
+        print('ERROR: Wrong input arguments. Paths must exist and contain tifs, and there must be 3 T values:\n', ae)
         return -1
 
     # Paths management and logging setup
     if not os.path.isdir(eval_folder_path):
         os.makedirs(eval_folder_path)
-    log.setup_logging_for_evaluation(eval_folder_path, 'size-metric')
+    log.setup_logging_for_evaluation(eval_folder_path, 'matrix-metric')
 
     logging.info("FIFTH METRIC : CONFUSION MATRICES\n")
     output_fig_path_m5_1 = os.path.join(eval_folder_path, f"5_confusion_matrix_T{thresholds_array[0]}.png")
@@ -277,6 +291,10 @@ def evaluate_matrix_metric(pred_folder_path: str, gt_folder_path: str, eval_fold
     output_fig_path_m5_3 = os.path.join(eval_folder_path, f"5_confusion_matrix_T{thresholds_array[2]}.png")
     if (not os.path.exists(output_fig_path_m5_1) or not os.path.exists(output_fig_path_m5_2)
             or not os.path.exists(output_fig_path_m5_3)):  # If all already exist, do not compute it again
-        eu.compute_confusion_matrices(pred_folder_path, gt_folder_path, eval_folder_path, thresholds_array)
+        try:
+            eu.compute_confusion_matrices(pred_folder_path, gt_folder_path, eval_folder_path, thresholds_array)
+        except Exception as e:
+            logging.error('A problem occurred during the matrix metric creation: ', e)
+            return -1
     else:
         logging.info(f'Confusion Matrices already computed and available at {output_fig_path_m5_1[:-7]}X.png\n')
