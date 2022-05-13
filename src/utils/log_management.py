@@ -1,5 +1,7 @@
 # Standard imports
-import logging, os, re, datetime
+import datetime
+import logging
+import os
 
 
 def setup_logging_for_evaluation(eval_folder_path: str, name_cmd: str):
@@ -12,7 +14,7 @@ def setup_logging_for_evaluation(eval_folder_path: str, name_cmd: str):
     log_file = os.path.join(eval_folder_path, 'log_eval_{}_{}.log'.format(name_cmd,
                                                                           datetime.datetime.now().strftime('%d-%m-%Y')))
     if os.path.exists(log_file):
-        print('Warning: log file already exists at {}\nNew logs will be append to its end.'.format(log_file))
+        print('Warning: log file already exists at {}\nNew logs will be appended to its end.'.format(log_file))
     else:
         print('Logs will be saved to {}'.format(log_file))
     logging.basicConfig(filename=log_file, filemode='a', format='%(levelname)s - %(asctime)s | %(message)s',
@@ -30,7 +32,7 @@ def setup_logging_for_prediction(output_folder_path: str, name_cmd: str):
     log_file = os.path.join(output_folder_path, 'log_{}_{}.log'.format(name_cmd,
                                                                        datetime.datetime.now().strftime('%d-%m-%Y')))
     if os.path.exists(log_file):
-        print('Warning: log file already exists at {}\nNew logs will be append to its end.'.format(log_file))
+        print('Warning: log file already exists at {}\nNew logs will be appended to its end.'.format(log_file))
     else:
         print('Logs will be saved to {}'.format(log_file))
     logging.basicConfig(filename=log_file, filemode='a', format='%(levelname)s - %(asctime)s | %(message)s',
