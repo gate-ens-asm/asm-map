@@ -55,16 +55,3 @@ def predict_dataset(model_path: str, imgs_folder_path: str, output_folder_path: 
         else:
             logging.info('{} / {} - Box {} was already predicted. Skipping.'.format(i + 1, len(dataset_imgs_list),
                                                                                     grid_labeled_region))
-
-
-if __name__ == '__main__':
-    import argparse
-
-    parser = argparse.ArgumentParser(description='Test prediction function')
-    parser.add_argument('-model', help='Path to model file')
-    parser.add_argument('-images', help='Path to folder that contains all tiff images')
-    parser.add_argument('-out', help='Path to output folder')
-    parser.add_argument('-t', help='Binary threshold value')
-    args = parser.parse_args()
-
-    predict_dataset(args.model, args.images, args.out, float(args.t))
