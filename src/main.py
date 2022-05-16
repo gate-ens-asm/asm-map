@@ -7,8 +7,6 @@ import sys
 import os
 import datetime
 
-# Third-party imports
-
 # Local imports
 sys.path.append('.')
 from src import evaluate as evl

@@ -33,7 +33,9 @@ def predict_dataset(model_path: str, imgs_folder_path: str, output_folder_path: 
                and the Threshold value must stand within [0 : 1]:\n", ae)
         return -1
 
-    # Logging setup
+    # Logging setup and output path management
+    if not os.path.exists(output_folder_path):
+        os.makedirs(output_folder_path)
     log.setup_logging_for_prediction(output_folder_path, 'predict-dataset')
 
     # Physically construct output tree storage folders and get paths to its sub-folders
