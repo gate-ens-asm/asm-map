@@ -1,0 +1,8 @@
+# Hide files that are expected to be downloaded/copied into this folder
+/images/**
+/ground_truth/**
+
+# Hide potential asm-map products
+/prediction/**
+/evaluation/**
+*.log

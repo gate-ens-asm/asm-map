@@ -1,0 +1,2 @@
+# Hide model file that is expected to be downloaded into the 'data' subfolder
+data/model.h5
