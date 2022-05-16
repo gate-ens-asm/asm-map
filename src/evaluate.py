@@ -31,9 +31,6 @@ def evaluate_all_metric(pred_folder_path: str, gt_folder_path: str, eval_folder_
     - 4) Receiver Operating Characteristic (ROC) and Area Under Curve (AUC) [1 GRAPH]
     - 5) Confusion Matrices for 3 threshold values defined in global var "thresholds_array" [3 GRAPHS]
 
-    Note that output results will be saved in an "evaluation" folder next to the input GT and predictions folders. Also,
-    a post-processing step is optional : a river mask can be applied to the predictions before to compute the metrics.
-
     :param str pred_folder_path: Path to the folder that contains the predicted tif images (probability predictions).
     :param str gt_folder_path: Path to the folder where the corresponding ground truth tif images are stored.
                                NB: They should have the same filename as the files stored in the "pred_folder_path".
